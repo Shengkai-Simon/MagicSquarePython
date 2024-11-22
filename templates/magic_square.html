@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Square Game</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .magic-square-container {
+            display: grid;
+            gap: 5px;
+            margin: 20px auto;
+            justify-content: center;
+            align-items: center;
+        }
+        .size-3 {
+            grid-template-columns: repeat(3, 60px);
+        }
+        .size-5 {
+            grid-template-columns: repeat(5, 60px);
+        }
+        .size-7 {
+            grid-template-columns: repeat(7, 60px);
+        }
+        .size-9 {
+            grid-template-columns: repeat(9, 60px);
+        }
+        .draggable {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid black;
+            background-color: #f0f0f0;
+            font-size: 1.2em;
+            cursor: text;
+            user-select: none;
+        }
+        .editable-cell {
+            background-color: #ffffff;
+            border: 1px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mt-5">Magic Square Game</h1>
+        <div id="magic-square-container" class="magic-square-container size-{{ magic_square|length }}">
+            <!-- Here the magic square will be displayed with editable elements -->
+            {% for row in magic_square %}
+                {% for item in row %}
+                    {% if item == 0 %}
+                        <div class="draggable editable-cell" contenteditable="true" data-missing="true"></div>
+                    {% else %}
+                        <div class="draggable">{{ item }}</div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+        <div class="text-center">
+            <button class="btn btn-primary mt-3" onclick="checkMagicSquare()">Check Magic Square</button>
+        </div>
+        <div id="result" class="text-center mt-3"></div>
+    </div>
+
+    <script>
+        function checkMagicSquare() {
+            const elements = document.querySelectorAll('.draggable');
+            const size = Math.sqrt(elements.length);
+            let square = [];
+            let row = [];
+
+            elements.forEach((element, index) => {
+                let value = parseInt(element.textContent);
+                if (isNaN(value)) value = 0;
+                row.push(value);
+                if ((index + 1) % size === 0) {
+                    square.push(row);
+                    row = [];
+                }
+            });
+
+            fetch('/check_magic_square', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ square: square })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('result');
+                if (data.is_magic) {
+                    resultDiv.textContent = `Congratulations! This is a magic square with a magic sum of ${data.magic_sum}`;
+                    resultDiv.className = 'text-success';
+                } else {
+                    resultDiv.textContent = 'Oops! This is not a magic square. Please check the rows, columns, and diagonals to ensure they all sum to the same value.';
+                    resultDiv.className = 'text-danger';
+                    if (data.correct_square) {
+                        resultDiv.innerHTML += `<br>Correct Magic Square:<br>`;
+                        data.correct_square.forEach(row => {
+                            resultDiv.innerHTML += row.join(' ') + '<br>';
+                        });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
