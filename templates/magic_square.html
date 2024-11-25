@@ -13,18 +13,23 @@
             justify-content: center;
             align-items: center;
         }
+
         .size-3 {
-            grid-template-columns: repeat(3, 60px);
-        }
-        .size-5 {
             grid-template-columns: repeat(5, 60px);
         }
-        .size-7 {
+
+        .size-5 {
             grid-template-columns: repeat(7, 60px);
         }
-        .size-9 {
+
+        .size-7 {
             grid-template-columns: repeat(9, 60px);
         }
+
+        .size-9 {
+            grid-template-columns: repeat(11, 60px);
+        }
+
         .draggable {
             width: 60px;
             height: 60px;
@@ -37,57 +42,153 @@
             cursor: text;
             user-select: none;
         }
+
         .editable-cell {
             background-color: #ffffff;
             border: 1px solid #007bff;
         }
+
+        .sum-cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0e0e0;
+            font-weight: bold;
+            border: 1px solid black;
+        }
+
+        .text-danger,.text-success{
+            text-align: center;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="text-center mt-5">Magic Square Game</h1>
-        <div id="magic-square-container" class="magic-square-container size-{{ magic_square|length }}">
-            <!-- Here the magic square will be displayed with editable elements -->
-            {% for row in magic_square %}
-                {% for item in row %}
-                    {% if item == 0 %}
-                        <div class="draggable editable-cell" contenteditable="true" data-missing="true"></div>
-                    {% else %}
-                        <div class="draggable">{{ item }}</div>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-        </div>
-        <div class="text-center">
-            <button class="btn btn-primary mt-3" onclick="checkMagicSquare()">Check Magic Square</button>
-        </div>
-        <div id="result" class="text-center mt-3"></div>
+<div class="container">
+    <h1 class="text-center mt-5">Magic Square Game</h1>
+    <div id="magic-square-container" class="magic-square-container size-{{ magic_square|length }}">
+        <!-- Top row sums -->
+        <div class="sum-cell" id="diag-sum-1">0</div>
+        {% for col in range(magic_square|length) %}
+        <div class="sum-cell" id="col-sum-{{ col }}">0</div>
+        {% endfor %}
+        <div class="sum-cell" id="diag-sum-2">0</div>
+
+        <!-- Magic square rows with left row sums and right diagonal sum -->
+        {% for i in range(magic_square|length) %}
+        <div class="sum-cell" id="row-sum-{{ i }}">0</div>
+        {% for item in magic_square[i] %}
+        {% if item == 0 %}
+        <div class="draggable editable-cell" contenteditable="true" data-missing="true"></div>
+        {% else %}
+        <div class="draggable">{{ item }}</div>
+        {% endif %}
+        {% endfor %}
+        <div class="sum-cell"></div>
+        {% endfor %}
+
+        <!-- Bottom row for diagonal sums -->
+        <div class="sum-cell" id="diag-sum-4">0</div>
+        {% for col in range(magic_square|length) %}
+        <div class="sum-cell" id="col-sum-extra-{{ col }}"></div>
+        {% endfor %}
+        <div class="sum-cell" id="diag-sum-3">0</div>
     </div>
+    <div class="text-center">
+        <button class="btn btn-primary mt-3" onclick="checkMagicSquare()">Check Magic Square</button>
+    </div>
+    <div id="result" class="text-center mt-3 result"></div>
 
-    <script>
-        function checkMagicSquare() {
-            const elements = document.querySelectorAll('.draggable');
-            const size = Math.sqrt(elements.length);
-            let square = [];
-            let row = [];
+</div>
 
-            elements.forEach((element, index) => {
-                let value = parseInt(element.textContent);
-                if (isNaN(value)) value = 0;
-                row.push(value);
-                if ((index + 1) % size === 0) {
-                    square.push(row);
-                    row = [];
-                }
-            });
+<script>
+    updateSums()
+    document.querySelectorAll('.editable-cell').forEach(cell => {
+        cell.addEventListener('input', updateSums);
+    });
 
-            fetch('/check_magic_square', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ square: square })
-            })
+    function updateSums() {
+        const elements = document.querySelectorAll('.draggable');
+        const size = Math.sqrt(elements.length);
+        let square = [];
+        let row = [];
+        const correctSum = size * (size * size + 1) / 2;
+
+        elements.forEach((element, index) => {
+            let value = parseInt(element.textContent);
+            if (isNaN(value)) value = 0;
+            row.push(value);
+            if ((index + 1) % size === 0) {
+                square.push(row);
+                row = [];
+            }
+        });
+
+        let rowSums = [];
+        let colSums = new Array(size).fill(0);
+        let diagSum1 = 0;
+        let diagSum2 = 0;
+
+        for (let i = 0; i < size; i++) {
+            let rowSum = 0;
+            for (let j = 0; j < size; j++) {
+                rowSum += square[i][j];
+                colSums[j] += square[i][j];
+                if (i === j) diagSum1 += square[i][j];
+                if (i + j === size - 1) diagSum2 += square[i][j];
+            }
+            rowSums.push(rowSum);
+            const rowSumElement = document.getElementById(`row-sum-${i}`);
+            rowSumElement.textContent = rowSum;
+            rowSumElement.style.color = rowSum === correctSum ? 'green' : 'red';
+        }
+
+        colSums.forEach((sum, index) => {
+            const colSumElement = document.getElementById(`col-sum-${index}`);
+            colSumElement.textContent = sum;
+            colSumElement.style.color = sum === correctSum ? 'green' : 'red';
+        });
+
+        const diagSum1Element = document.getElementById('diag-sum-1');
+        const diagSum3Element = document.getElementById('diag-sum-3');
+        diagSum1Element.textContent = diagSum1;
+        diagSum1Element.style.color = diagSum1 === correctSum ? 'green' : 'red';
+        diagSum3Element.textContent = diagSum1;
+        diagSum3Element.style.color = diagSum1 === correctSum ? 'green' : 'red';
+
+        const diagSum2Element = document.getElementById('diag-sum-2');
+        const diagSum4Element = document.getElementById('diag-sum-4');
+        diagSum2Element.textContent = diagSum2;
+        diagSum2Element.style.color = diagSum2 === correctSum ? 'green' : 'red';
+        diagSum4Element.textContent = diagSum2;
+        diagSum4Element.style.color = diagSum2 === correctSum ? 'green' : 'red';
+    }
+
+    function checkMagicSquare() {
+        const elements = document.querySelectorAll('.draggable');
+        const size = Math.sqrt(elements.length);
+        let square = [];
+        let row = [];
+
+        elements.forEach((element, index) => {
+            let value = parseInt(element.textContent);
+            if (isNaN(value)) value = 0;
+            row.push(value);
+            if ((index + 1) % size === 0) {
+                square.push(row);
+                row = [];
+            }
+        });
+
+        fetch('/check_magic_square', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({square: square})
+        })
             .then(response => response.json())
             .then(data => {
                 const resultDiv = document.getElementById('result');
@@ -108,7 +209,7 @@
             .catch(error => {
                 console.error('Error:', error);
             });
-        }
-    </script>
+    }
+</script>
 </body>
 </html>
