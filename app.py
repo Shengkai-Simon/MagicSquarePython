@@ -33,9 +33,34 @@ def index():
         for idx in missing_indices:
             magic_square[idx // n][idx % n] = 0
 
-        return render_template("magic_square.html", magic_square=magic_square)
+        grid_columns = n + 2
+        return render_template("magic_square.html", magic_square=magic_square, grid_columns=grid_columns)
 
     return render_template("index.html")
+
+@app.route("/calculate_sums", methods=["POST"])
+def calculate_sums():
+    data = request.get_json()
+    square = data.get('square')
+
+    if not square:
+        return jsonify({'error': 'No square provided'}), 400
+
+    n = len(square)
+    correct_sum = n * (n * n + 1) // 2
+
+    row_sums = [sum(row) for row in square]
+    col_sums = [sum([square[i][j] for i in range(n)]) for j in range(n)]
+    diag_sum_1 = sum([square[i][i] for i in range(n)])
+    diag_sum_2 = sum([square[i][n - i - 1] for i in range(n)])
+
+    return jsonify({
+        'row_sums': row_sums,
+        'col_sums': col_sums,
+        'diag_sum_1': diag_sum_1,
+        'diag_sum_2': diag_sum_2,
+        'correct_sum': correct_sum
+    })
 
 @app.route("/check_magic_square", methods=["POST"])
 def check_magic_square():
