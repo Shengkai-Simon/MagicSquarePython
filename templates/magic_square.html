@@ -99,24 +99,36 @@
             font-weight: bold;
             border-radius: 10px;
             box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            transition: visibility 0.2s ease, opacity 0.2s ease;
+        }
+
+        .hidden {
+            visibility: hidden;
+            opacity: 0;
         }
     </style>
 </head>
 <body>
 <div class="container">
     <h1 class="text-center mt-3">Magic Square Game</h1>
+
+    <div class="form-check form-switch text-center mb-3">
+        <input class="form-check-input" type="checkbox" id="toggleHints" onclick="toggleHints()">
+        <label class="form-check-label" for="toggleHints">Show Hints</label>
+    </div>
+
     <div id="magic-square-container" class="magic-square-container"
          style="grid-template-columns: repeat( {{grid_columns}}, 60px);">
         <!-- Top row sums -->
-        <div class="sum-cell" id="diag-sum-1">0</div>
+        <div class="sum-cell hidden" id="diag-sum-1">0</div>
         {% for col in range(magic_square|length) %}
-            <div class="sum-cell" id="col-sum-{{ col }}">0</div>
+            <div class="sum-cell hidden" id="col-sum-{{ col }}">0</div>
         {% endfor %}
-        <div class="sum-cell" id="diag-sum-2">0</div>
+        <div class="sum-cell hidden" id="diag-sum-2">0</div>
 
         <!-- Magic square rows with left row sums and right diagonal sum -->
         {% for i in range(magic_square|length) %}
-            <div class="sum-cell" id="row-sum-{{ i }}">0</div>
+            <div class="sum-cell hidden" id="row-sum-{{ i }}">0</div>
             {% for item in magic_square[i] %}
                 {% if item == 0 %}
                     <div class="draggable editable-cell" contenteditable="true" data-missing="true"></div>
@@ -124,16 +136,17 @@
                     <div class="draggable">{{ item }}</div>
                 {% endif %}
             {% endfor %}
-            <div class="sum-cell" id="row-sum-extra-{{ i }}"></div>
+            <div class="sum-cell hidden" id="row-sum-extra-{{ i }}"></div>
         {% endfor %}
 
         <!-- Bottom row for diagonal sums -->
-        <div class="sum-cell" id="diag-sum-4">0</div>
+        <div class="sum-cell hidden" id="diag-sum-4">0</div>
         {% for col in range(magic_square|length) %}
-            <div class="sum-cell" id="col-sum-extra-{{ col }}"></div>
+            <div class="sum-cell hidden" id="col-sum-extra-{{ col }}"></div>
         {% endfor %}
-        <div class="sum-cell" id="diag-sum-3">0</div>
+        <div class="sum-cell hidden" id="diag-sum-3">0</div>
     </div>
+
     <div class="text-center">
         <button class="btn btn-primary mt-3" onclick="checkMagicSquare()">Check Magic Square</button>
     </div>
@@ -141,7 +154,18 @@
 </div>
 
 <script>
-    updateSums()
+    // Function to toggle the visibility of the hints (sum cells)
+    function toggleHints() {
+        const hintElements = document.querySelectorAll('.sum-cell');
+        hintElements.forEach(hint => {
+            hint.classList.toggle('hidden');
+        });
+        const isChecked = document.getElementById('toggleHints').checked;
+        if (isChecked){
+            updateSums()
+        }
+    }
+
     document.querySelectorAll('.editable-cell').forEach(cell => {
         cell.addEventListener('input', () => {
             updateSums();
